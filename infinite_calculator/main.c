@@ -7,24 +7,34 @@
 #define EOS		257
 #define NUM		258
 
+// Global communication variables
+int current_token;
+int current_attribute;
+
 // Prototypes
+int expr();
+int term();
+int factor();
 void error ( char * );
-int get_token() ;
+int get_token();
+void match( int expected_token );
 
 /* bounded memory calculator */
 int main()
 {
-	int current_token;
+	int value;
 
+	current_token = get_token();
 	while ( current_token != EOS ) {
-		current_token = get_token();
+		value = expr();
+		fprintf( stderr, "\nValue = %d\n", value );
 	}
 }
 
 /* calculator */
 
 // handles addition
-expr()
+int expr()
 {
 	int value = term();
 	while (1) {
@@ -38,9 +48,9 @@ expr()
 }
 
 // handles multiplication
-term()
+int term()
 {
-	int value factor();
+	int value = factor();
 	while (1) {
 		if ( current_token == '*' ) {
 			match( '*' );
@@ -52,7 +62,7 @@ term()
 }
 
 // handles brackets and numbers
-factor()
+int factor()
 {
 	int value;
 
@@ -63,9 +73,20 @@ factor()
 	}
 	else if ( current_token == NUM ) {
 		value = current_attribute;
+		match ( NUM );
 		return value;
 	}
 	else error( "Unexpected token in factor()" );
+}
+
+void match( int expected_token )
+{
+	if ( current_token == expected_token ) {
+		current_token = get_token();
+	}
+	else {
+		error( "Unexpected token in match" );
+	}
 }
 
 /* get next token */
@@ -77,7 +98,9 @@ int get_token()
 	while (1) {
 		switch ( c = getchar() ) {
 		case '+': case '-': case '*': case '(': case ')':
+#ifdef DEBUG
 			fprintf( stderr, "[OP:%c]", c );
+#endif
 			return c;	// return operators and brackets as is
 		case ' ': case '\t':
 			continue;	// ignore spaces and tabs
@@ -88,7 +111,10 @@ int get_token()
 					value = value * 10 + (c - '0');
 				}
 				ungetc( c, stdin );
+#ifdef DEBUG
 				fprintf( stderr, "[NUM:%d]", value );
+#endif
+				current_attribute = value;
 				return NUM;
 			}
 			else if (c == '\n') {

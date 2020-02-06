@@ -14,7 +14,7 @@
 
 void formatter( FILE *, FILE *, int );
 
-main( int argc, char *argv[] )
+int main( int argc, char *argv[] )
 {
 	FILE *ifp, *ofp;
 	clock_t begin_time, end_time;
@@ -45,6 +45,8 @@ main( int argc, char *argv[] )
 }
 
 void formatter( FILE *ifp, FILE *ofp, int width )
-{}
+{
+	
+}
 
 

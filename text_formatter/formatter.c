@@ -1,54 +1,59 @@
-/*---------------------------------------------------------------------- 
+/*----------------------------------------------------------------------
  * formatter.c:
  *
- * compilation: 
+ * compilation:
  *	gcc -o formatter formatter.c
  * usage:
  *	./formatter <input-file> <output-file> <width>
- * 
+ *
  *-----------------------------------------------------------------------
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
+#include <string.h>
+#include <ctype.h>
+
 #include "list.h"
 
-#define BUFFER_SIZE		2
+#define BUFFER_SIZE     2
 
 /* prototypes */
 void formatter( FILE *, FILE *, int );
-char *getword ( FILE * );
+char *getword( FILE * );
+char *get_new_buffer( int );
 
-
-/* main driver */
 int main( int argc, char *argv[] )
 {
-	FILE *ifp, *ofp;
-	clock_t begin_time, end_time;
-	double time_used;
+    FILE *ifp, *ofp;
+    clock_t begin_time, end_time;
+    double time_used;
 
-	if (argc < 4) {
-	  fprintf(stderr,"Not enough arguments\n");
-	  exit(1);
-	}
-	if (!(ifp = fopen(argv[1],"r"))) {
-	  fprintf(stderr,"Cannot open file %s\n",argv[1]);
-	  exit(1);
-	}
-	if (!(ofp = fopen(argv[2],"w"))) {
-	  fprintf(stderr,"Cannot open file %s\n",argv[2]);
-	  exit(1);
-	}
 
-	begin_time = clock();
-	formatter( ifp, ofp, atoi(argv[3]));
-	end_time = clock();
-	time_used = (double)(end_time - begin_time)/CLOCKS_PER_SEC;
-	fprintf( stderr, "Time usage = %17.13f\n", time_used );
+    if (argc < 4) {
+        fprintf(stderr,"Not enough arguments\n");
+        exit(1);
+    }
+    if (!(ifp = fopen(argv[1],"r"))) {
+        fprintf(stderr,"Cannot open file %s\n",argv[1]);
+        exit(1);
+    }
+    if (!(ofp = fopen(argv[2],"w"))) {
+        fprintf(stderr,"Cannot open file %s\n",argv[2]);
+        exit(1);
+    }
 
-  	fclose(ifp);
-  	fclose(ofp);
+    begin_time = clock();
+    formatter( ifp, ofp, atoi(argv[3]));
+    end_time = clock();
+    time_used = (double)(end_time - begin_time)/CLOCKS_PER_SEC;
+    fprintf( stderr, "Time usage = %17.13f\n", time_used );
+
+    fclose(ifp);
+    fclose(ofp);
+
+    return 0;
 }
 
 /* takes an input file and formats an output file to be right
@@ -56,28 +61,135 @@ int main( int argc, char *argv[] )
  */
 void formatter( FILE *ifp, FILE *ofp, int width )
 {
-	char *str;
-	list_t *start, *current;
+    char *str;
+    list_t *start = NULL, *current = NULL;
 
-	start = NULL;
-	/* read a file and populate a linked list */
-	while ( !feof( ifp ) ) {
-		str = getword( ifp );
-//#ifdef DEBUG
-		fprintf( stderr, "[%s]\n", str );
-//#endif
-#ifdef LIST
-		if ( start != NULL ) {
-			current->next = make_node( str );
-			current = current->next;
-		}
-		else {
-			start = make_node( str );
-			current = start;
-		}
-#endif
-		free( str );
-	}	
+    /* read a file and populate a linked list. */
+    while ( !feof( ifp ) ) {
+        str = getword( ifp );
+        if ( strlen(str) > width-1 ) {
+            fprintf( stderr, "Word too long to fit on a single line: [%s]\n", str );
+            return;
+        }
+        if ( start != NULL ) {
+            current->next = make_node( str );
+            current = current->next;
+        }
+        else {
+            start = make_node( str );
+            current = start;
+        }
+        free( str );
+    }
+
+    int length = 0, word_count = 0;
+    char *buffer = get_new_buffer(width);
+    list_t *ptr;
+    list_t *line_start = current = start;
+
+    /* iterate through the linked list creating lines and writing them to the output file. */
+    while ( current != NULL ) {
+        int word_length = strlen(current->word);
+
+        /* Calculate the length of the line and number of words. */
+        if ( length + word_count + word_length <= width ) {
+            length += word_length;
+            if ( word_length > 0 ) {
+                word_count++;
+            }
+        }
+        /* Create the line and write it. */
+        else {
+            buffer = get_new_buffer(width);
+            int spacing;
+            int remainder;
+            if ( word_count > 1 ) {
+                spacing = (width - length) / (word_count - 1);
+                remainder = (width - length) % (word_count - 1);
+            }
+            else {
+                spacing = 0;
+                remainder = width - length;
+            }
+
+            /* Iterate through every word on the line and populate the buffer. */
+            int buffer_index = 0;
+            for (ptr = line_start; ptr != current; ptr = ptr->next) {
+                word_length = strlen(ptr->word);
+                if (word_length == 0) {
+                    continue;
+                }
+
+                /* Iterate through the word and add it to the buffer. */
+                int index;
+                int word_index = 0;
+                for (index = buffer_index; index < word_length + buffer_index; ++index) {
+                    buffer[index] = ptr->word[word_index];
+                    ++word_index;
+                }
+                buffer_index += word_length;
+
+                /* Add the correct number of spaces after the word */
+                if ( buffer_index < width ) {
+                    for (index = 0; index < spacing; ++index) {
+                        buffer[buffer_index] = ' ';
+                        ++buffer_index;
+                    }
+                }
+
+                /* if there is a remainder, add a single space after the word. */
+                if ( remainder > 0 ) {
+                    buffer[buffer_index] = ' ';
+                    ++buffer_index;
+                    --remainder;
+                }
+
+                buffer[width] = '\0';
+            }
+            fprintf( ofp, "%s\n", buffer);
+
+            length = word_count = 0;
+            line_start = current;
+            free ( buffer );
+
+            continue;
+        }
+
+        /* Special case for the very last line. */
+        if ( current->next == NULL ) {
+            buffer = get_new_buffer(width);
+
+            /* Populate the last line of the buffer. */
+            int buffer_index = 0;
+            for (ptr = line_start; ptr != current; ptr = ptr->next) {
+                word_length = strlen(ptr->word);
+                if (word_length == 0) {
+                    continue;
+                }
+
+                /* Iterate through the word and add it to the buffer. */
+                int index;
+                int word_index = 0;
+                for (index = buffer_index; index < word_length + buffer_index; ++index) {
+                    buffer[index] = ptr->word[word_index];
+                    ++word_index;
+                }
+                buffer_index += word_length;
+
+                /* Add the correct number of spaces after the word */
+                if ( ptr->next != current ) {
+                    buffer[buffer_index] = ' ';
+                    ++buffer_index;
+                }
+
+                buffer[buffer_index] = '\0';
+            }
+
+            fprintf( ofp, "%s\n", buffer );
+            free ( buffer );
+        }
+        current = current->next;
+    }
 }
 
 /* getword:
@@ -85,34 +197,36 @@ void formatter( FILE *ifp, FILE *ofp, int width )
  */
 char *getword( FILE *fp )
 {
-	int c;
-	char *buffer;
-	int i, size;
+    int c;
+    char *buffer;
+    int i, size;
 
-	/* request a character buffer of size BUFFER_SIZE */
-	buffer = (char *)malloc( BUFFER_SIZE * sizeof(char) );
-	assert( buffer != NULL );
+    /* request a character buffer of size BUFFER_SIZE */
+    buffer = get_new_buffer(BUFFER_SIZE);
 
-	i = 0;
-	size = BUFFER_SIZE;
-	while ( !isspace(c = fgetc( fp )) ) {
-		if ( c == EOF ) break;
-#ifdef DEBUG
-		fprintf( stderr, "%c", c );
-#endif
-		if ( i >= size-1 ) {
-			buffer = (char *)realloc( buffer, size = 2*size );
-		}
-		buffer[i++] = c;
-	}
-	buffer[i] = '\0';
-#ifdef DEBUG
-	fprintf( stderr, "{%d:%d:%s}\n", i, size, buffer );
-#endif
+    i = 0;
+    size = BUFFER_SIZE;
+    while ( !isspace(c = fgetc( fp )) ) {
+        if ( c == EOF ) break;
+        if ( i >= size-1 ) {
+            buffer = (char *)realloc( buffer, size = 2*size );
+        }
+        buffer[i++] = c;
+    }
+    buffer[i] = '\0';
 
-	return buffer;		
+    return buffer;
 }
 
+/*
+ * returns a pointer to a character array of the given size of characters plus '\0'.
+ */
+inline char *get_new_buffer( int size )
+{
+    char *buffer = (char *)malloc( (size + 1) * sizeof(char) );
+    assert ( buffer != NULL );
+    return buffer;
+}
 
 
 

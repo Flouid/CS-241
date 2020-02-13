@@ -8,32 +8,31 @@
 /* constructor */
 list_t *make_node( char *str )
 {
-	list_t *ptr;
+    list_t *ptr;
 
-	ptr = (list_t *)malloc( sizeof(list_t) );
-	assert( ptr != NULL );
-	ptr->word = (char *)strdup( str );
-	ptr->next = NULL;
+    ptr = (list_t *)malloc( sizeof(list_t) );
+    assert( ptr != NULL );
+    ptr->word = (char *)strdup( str );
+    ptr->next = NULL;
 
-	return ptr;
+    return ptr;
 }
 
 /* destructor */
 void free_node( list_t *ptr )
 {
-	free( ptr );
+    free( ptr );
 }
 
 /* show linked list */
 void show( list_t *start )
 {
-	list_t *ptr;
+    list_t *ptr;
 
-	for ( ptr = start; ptr != NULL; ptr = ptr->next ) {
-		fprintf( stderr, "[%s]\n", ptr->word );
-	}
+    for ( ptr = start; ptr != NULL; ptr = ptr->next ) {
+        fprintf( stderr, "[%s]\n", ptr->word );
+    }
 }
-
 
 
 

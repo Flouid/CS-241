@@ -12,7 +12,7 @@ $(SRC).o: $(SRC).c
 	$(CC) -g -c $(SRC).c
 
 list.o: list.c
-	gcc -g -c list.c
+	$(CC) -g -c list.c
 
 test-me:
 	./$(EXEC) $(TEXT).txt out.txt 50

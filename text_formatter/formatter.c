@@ -67,7 +67,7 @@ void formatter( FILE *ifp, FILE *ofp, int width )
     /* read a file and populate a linked list. */
     while ( !feof( ifp ) ) {
         str = getword( ifp );
-        if ( strlen(str) > width-1 ) {
+        if ( strlen(str) > width - 1 ) {
             fprintf( stderr, "Word too long to fit on a single line: [%s]\n", str );
             return;
         }
@@ -83,13 +83,16 @@ void formatter( FILE *ifp, FILE *ofp, int width )
     }
 
     int length = 0, word_count = 0;
-    char *buffer = get_new_buffer(width);
+    char *buffer = get_new_buffer( width );
     list_t *ptr;
     list_t *line_start = current = start;
 
+    /* The last character of the buffer should be a terminating character that never changes. */
+    buffer[width] = '\0';
+
     /* iterate through the linked list creating lines and writing them to the output file. */
     while ( current != NULL ) {
-        int word_length = strlen(current->word);
+        int word_length = strlen( current->word );
 
         /* Calculate the length of the line and number of words. */
         if ( length + word_count + word_length <= width ) {
@@ -98,9 +101,9 @@ void formatter( FILE *ifp, FILE *ofp, int width )
                 word_count++;
             }
         }
+
         /* Create the line and write it. */
         else {
-            buffer = get_new_buffer(width);
             int spacing;
             int remainder;
             if ( word_count > 1 ) {
@@ -114,16 +117,16 @@ void formatter( FILE *ifp, FILE *ofp, int width )
 
             /* Iterate through every word on the line and populate the buffer. */
             int buffer_index = 0;
-            for (ptr = line_start; ptr != current; ptr = ptr->next) {
-                word_length = strlen(ptr->word);
-                if (word_length == 0) {
+            for ( ptr = line_start; ptr != current; ptr = ptr->next ) {
+                word_length = strlen( ptr->word );
+                if ( word_length == 0 ) {
                     continue;
                 }
 
                 /* Iterate through the word and add it to the buffer. */
                 int index;
                 int word_index = 0;
-                for (index = buffer_index; index < word_length + buffer_index; ++index) {
+                for ( index = buffer_index; index < word_length + buffer_index; ++index ) {
                     buffer[index] = ptr->word[word_index];
                     ++word_index;
                 }
@@ -131,7 +134,7 @@ void formatter( FILE *ifp, FILE *ofp, int width )
 
                 /* Add the correct number of spaces after the word */
                 if ( buffer_index < width ) {
-                    for (index = 0; index < spacing; ++index) {
+                    for ( index = 0; index < spacing; ++index ) {
                         buffer[buffer_index] = ' ';
                         ++buffer_index;
                     }
@@ -143,26 +146,30 @@ void formatter( FILE *ifp, FILE *ofp, int width )
                     ++buffer_index;
                     --remainder;
                 }
-
-                buffer[width] = '\0';
             }
-            fprintf( ofp, "%s\n", buffer);
+
+            /* Populate all unused characters in the buffer with spaces. */
+            while ( buffer_index < width ) {
+                buffer[buffer_index] = ' ';
+                ++buffer_index;
+            }
+
+            fprintf( ofp, "%s\n", buffer );
 
             length = word_count = 0;
             line_start = current;
-            free ( buffer );
 
+            /* Line is complete. */
             continue;
         }
 
         /* Special case for the very last line. */
         if ( current->next == NULL ) {
-            buffer = get_new_buffer(width);
 
             /* Populate the last line of the buffer. */
             int buffer_index = 0;
-            for (ptr = line_start; ptr != current; ptr = ptr->next) {
-                word_length = strlen(ptr->word);
+            for ( ptr = line_start; ptr != current; ptr = ptr->next ) {
+                word_length = strlen( ptr->word );
                 if (word_length == 0) {
                     continue;
                 }
@@ -170,7 +177,7 @@ void formatter( FILE *ifp, FILE *ofp, int width )
                 /* Iterate through the word and add it to the buffer. */
                 int index;
                 int word_index = 0;
-                for (index = buffer_index; index < word_length + buffer_index; ++index) {
+                for ( index = buffer_index; index < word_length + buffer_index; ++index ) {
                     buffer[index] = ptr->word[word_index];
                     ++word_index;
                 }
@@ -181,15 +188,12 @@ void formatter( FILE *ifp, FILE *ofp, int width )
                     buffer[buffer_index] = ' ';
                     ++buffer_index;
                 }
-
-                buffer[buffer_index] = '\0';
             }
-
             fprintf( ofp, "%s\n", buffer );
-            free ( buffer );
         }
         current = current->next;
     }
+    free ( buffer );
 }
 
 /* getword:

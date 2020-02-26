@@ -31,27 +31,27 @@ int main( int argc, char *argv[] )
     double time_used;
 
 
-    if (argc < 4) {
-        fprintf(stderr,"Not enough arguments\n");
-        exit(1);
+    if ( argc < 4 ) {
+        fprintf( stderr,"Not enough arguments\n" );
+        exit( 1 );
     }
-    if (!(ifp = fopen(argv[1],"r"))) {
-        fprintf(stderr,"Cannot open file %s\n",argv[1]);
-        exit(1);
+    if ( !( ifp = fopen( argv[1],"r" ) ) ) {
+        fprintf( stderr,"Cannot open file %s\n",argv[1] );
+        exit( 1 );
     }
-    if (!(ofp = fopen(argv[2],"w"))) {
-        fprintf(stderr,"Cannot open file %s\n",argv[2]);
-        exit(1);
+    if ( !( ofp = fopen( argv[2],"w" ) ) ) {
+        fprintf( stderr,"Cannot open file %s\n",argv[2] );
+        exit( 1 );
     }
 
     begin_time = clock();
-    formatter( ifp, ofp, atoi(argv[3]));
+    formatter( ifp, ofp, atoi( argv[3] ) );
     end_time = clock();
     time_used = (double)(end_time - begin_time)/CLOCKS_PER_SEC;
     fprintf( stderr, "Time usage = %17.13f\n", time_used );
 
-    fclose(ifp);
-    fclose(ofp);
+    fclose( ifp );
+    fclose( ofp );
 
     return 0;
 }
@@ -170,7 +170,7 @@ void formatter( FILE *ifp, FILE *ofp, int width )
             int buffer_index = 0;
             for ( ptr = line_start; ptr != current; ptr = ptr->next ) {
                 word_length = strlen( ptr->word );
-                if (word_length == 0) {
+                if ( word_length == 0 ) {
                     continue;
                 }
 
@@ -210,7 +210,7 @@ char *getword( FILE *fp )
 
     i = 0;
     size = BUFFER_SIZE;
-    while ( !isspace(c = fgetc( fp )) ) {
+    while ( !isspace( c = fgetc( fp ) ) ) {
         if ( c == EOF ) break;
         if ( i >= size-1 ) {
             buffer = (char *)realloc( buffer, size = 2*size );

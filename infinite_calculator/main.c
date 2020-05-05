@@ -1,29 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 
-// Constants
-#define EOS		257
-#define NUM		258
+#include "calculator.h"
 
-// Global communication variables
-int current_token;
-int current_attribute;
-
-// Prototypes
-int expr();
-int term();
-int factor();
-void error ( char * );
-int get_token();
-void match( int expected_token );
-
-/* bounded memory calculator */
+/* unbounded memory calculator */
 int main( int argc, char *argv[] )
 {
     FILE *ifp, *ofp;
-    int value;
 
+    /* making sure program has valid input arguments */
     if (argc < 3) {
         fprintf(stderr,"Not enough arguments\n");
         exit(1);
@@ -37,107 +22,21 @@ int main( int argc, char *argv[] )
         exit(1);
     }
 
-    current_token = get_token();
-    while ( current_token != EOS ) {
-        value = expr();
-        fprintf( stderr, "\nValue = %d\n", value );
-    }
-}
+    //FILE *stream = stderr;      // console output
+    FILE *stream = ofp;         // file output
 
-/* calculator */
+    /* all of the variables necessary to run the calculator are wrapped into one data type */
+    calculator *C = create_calculator(ifp);
+    digit_list *value = NULL;
 
-// handles addition
-int expr()
-{
-    int value = term();
-    while (1) {
-        if ( current_token == '+' ) {
-            match( '+' );
-            value += term();
-        }
-        else break;
-    }
-    return value;
-}
-
-// handles multiplication
-int term()
-{
-    int value = factor();
-    while (1) {
-        if ( current_token == '*' ) {
-            match( '*' );
-            value *= factor();
-        }
-        else break;
-    }
-    return value;
-}
-
-// handles brackets and numbers
-int factor()
-{
-    int value;
-
-    if ( current_token == '(' ) {
-        match( '(' );
-        value = expr();
-        match( ')' );
-    }
-    else if ( current_token == NUM ) {
-        value = current_attribute;
-        match ( NUM );
-        return value;
-    }
-    else error( "Unexpected token in factor()" );
-}
-
-void match( int expected_token )
-{
-    if ( current_token == expected_token ) {
-        current_token = get_token();
-    }
-    else {
-        error( "Unexpected token in match" );
-    }
-}
-
-/* get next token */
-int get_token()
-{
-    int c;
-    int value;
-
-    while (1) {
-        switch ( c = getchar() ) {
-            case '+': case '-': case '*': case '(': case ')':
-                return c;	// return operators and brackets as is
-            case ' ': case '\t':
-                continue;	// ignore spaces and tabs
-            default:
-                if ( isdigit(c) ) {
-                    value = c - '0';
-                    while ( isdigit( c = getchar() )) {
-                        value = value * 10 + (c - '0');
-                    }
-                    ungetc( c, stdin );
-                    current_attribute = value;
-                    return NUM;
-                }
-                else if (c == '\n') {
-                    return EOS;
-                }
-                else {
-                    fprintf( stderr, "{%c} ", c );
-                    error( "Unknown token" );
-                }
+    /* outer loop runs once for every line */
+    while(1) {
+        C->current_token = get_token(C);
+        /* inner loop runs for every term */
+        while (C->current_token != END_OF_LINE) {
+            value = expr(C);
+            show_number(value, stream);
+            fprintf(stream, "\n");
         }
     }
-}
-
-/* error reporting function */
-void error( char *message )
-{
-    fprintf( stderr, "Error: %s\n", message );
-    exit(1);
 }
